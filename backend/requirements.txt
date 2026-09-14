@@ -2,7 +2,12 @@ langchain
 langchain-core
 langchain-google-genai
 langgraph
+apscheduler
+fastapi
+uvicorn
+websockets
 yfinance
 pandas
 numpy
 python-dotenv
+requests
