@@ -1,0 +1,8 @@
+{
+  "name": "ACE & COMPANY",
+  "description": "Multi-agent autonomous quantitative asset management firm headquarters with crystal glass skyscraper architecture, human-in-the-loop executive governance, live news intelligence, and engineering telemetry bus.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
