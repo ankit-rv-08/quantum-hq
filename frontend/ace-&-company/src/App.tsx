@@ -31,6 +31,7 @@ import { MarketShockSimulator } from './components/MarketShockSimulator';
 import { LiveNewsFeed } from './components/LiveNewsFeed';
 import { TelemetryDrawer } from './components/TelemetryDrawer';
 import { soundFx } from './utils/audio';
+import { useFirmTelemetry } from './hooks/useWebSocket';
 import { 
   getPersistedTab, 
   setPersistedTab, 
@@ -46,6 +47,7 @@ import {
 } from './utils/storage';
 
 export default function App() {
+  const { isConnected, messages, sendVeto } = useFirmTelemetry();
   const [stocks, setStocks] = useState<StockTicker[]>(INITIAL_STOCKS);
   const [floors, setFloors] = useState<FloorData[]>(FLOORS_DATA);
   const [selectedFloorId, setSelectedFloorId] = useState<FloorId | null>(() => getPersistedFloor(4));
@@ -269,6 +271,9 @@ export default function App() {
             <div className={`hidden xl:flex items-center gap-3 ${
               themeMode === 'light' && !blueprintMode ? 'text-slate-500' : 'text-slate-400'
             }`}>
+              <span className={isConnected ? 'text-emerald-500' : 'text-rose-400'}>
+                WS {isConnected ? 'CONNECTED' : 'OFFLINE'}
+              </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>5 Floors Monitored</span>
@@ -426,6 +431,7 @@ export default function App() {
               blueprintMode={blueprintMode}
               shiftActive={shiftActive}
               themeMode={themeMode}
+              onVeto={sendVeto}
             />
           </div>
         )}
@@ -483,10 +489,12 @@ export default function App() {
       {/* 6. REAL-TIME REDIS / KAFKA PACKET TELEMETRY DRAWER */}
       <TelemetryDrawer
         isOpen={isTelemetryDrawerOpen}
-        onClose={() => setIsTelemetryDrawerOpen(false)}
+        onToggle={() => setIsTelemetryDrawerOpen(false)}
         blueprintMode={blueprintMode}
         themeMode={themeMode}
         selectedFloorId={selectedFloorId}
+        liveMessages={messages}
+        isConnected={isConnected}
       />
 
       {/* FOOTER CREDENTIALS */}
@@ -514,9 +522,9 @@ export default function App() {
             SECURE WS: CONNECTED
           </span>
           <span className={themeMode === 'light' && !blueprintMode ? 'text-slate-300' : 'text-slate-700'}>•</span>
-          <span className="text-emerald-500 font-semibold flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            STATE PERSISTENCE: SYNCED
+          <span className={`font-semibold flex items-center gap-1 ${isConnected ? 'text-emerald-500' : 'text-rose-400'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            SECURE WS: {isConnected ? 'CONNECTED' : 'OFFLINE'}
           </span>
           <span className={themeMode === 'light' && !blueprintMode ? 'text-slate-300' : 'text-slate-700'}>•</span>
           <span className={themeMode === 'light' && !blueprintMode ? 'text-slate-500' : 'text-slate-500'}>© 2026 ACE & COMPANY HOLDINGS LLC</span>

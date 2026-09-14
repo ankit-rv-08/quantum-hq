@@ -27,12 +27,53 @@ interface LiveEventStreamProps {
 
 export const LiveEventStream: React.FC<LiveEventStreamProps> = ({ shiftActive, blueprintMode, themeMode = 'dark' }) => {
   const [logs, setLogs] = useState<EventLogEntry[]>(INITIAL_EVENT_LOGS);
+  const [backendStatus, setBackendStatus] = useState<'CONNECTING' | 'LIVE' | 'OFFLINE'>('CONNECTING');
   const [filterType, setFilterType] = useState<string>('ALL');
   const [filterFloor, setFilterFloor] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [selectedRawLog, setSelectedRawLog] = useState<EventLogEntry | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const socket = new WebSocket(`${protocol}://${window.location.hostname}:8000/ws/telemetry`);
+
+    socket.onopen = () => setBackendStatus('LIVE');
+    socket.onclose = () => setBackendStatus('OFFLINE');
+    socket.onerror = () => setBackendStatus('OFFLINE');
+    socket.onmessage = (event) => {
+      try {
+        const packet = JSON.parse(event.data) as {
+          type?: string;
+          floor?: number;
+          agent?: string;
+          message?: string;
+          data?: { status?: string; timestamp?: string };
+        };
+        if (packet.type === 'SYSTEM_STATUS') {
+          setBackendStatus(packet.data?.status === 'LIVE' ? 'LIVE' : 'OFFLINE');
+          return;
+        }
+        if (packet.type !== 'FLOOR_EVENT' || !packet.message) return;
+        const floorId = ([0, 1, 2, 3, 4].includes(packet.floor ?? -1) ? packet.floor : 0) as FloorId;
+        const timestamp = new Date().toTimeString().split(' ')[0];
+        setLogs((previous) => [{
+          id: `backend-${Date.now()}`,
+          timestamp,
+          floorId,
+          agentName: packet.agent ?? 'Backend_Event_Bus',
+          type: floorId === 4 ? 'BOARD_DIRECTIVE' : 'STATE_BUS',
+          message: packet.message,
+          rawJson: JSON.stringify(packet, null, 2),
+        }, ...previous.slice(0, 75)]);
+      } catch {
+        // Ignore malformed packets and keep the stream usable.
+      }
+    };
+
+    return () => socket.close();
+  }, []);
 
   // Periodic simulated live event arrival
   useEffect(() => {
@@ -155,7 +196,7 @@ export const LiveEventStream: React.FC<LiveEventStreamProps> = ({ shiftActive, b
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-emerald-500 mb-1">
             <Terminal className="w-4 h-4 text-emerald-500" />
-            <span>KRATOS // LOW-LATENCY SSE EVENT BUS</span>
+            <span>KRATOS // WEBSOCKET EVENT BUS // {backendStatus}</span>
           </div>
           <h2 className={`text-2xl font-bold font-['Cinzel',serif] ${isLight ? 'text-slate-900' : 'text-white'}`}>
             Firm State Bus & Event Stream

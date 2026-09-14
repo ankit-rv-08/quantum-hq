@@ -261,6 +261,11 @@ export const TopTickerBar: React.FC<TopTickerBarProps> = ({
             <span className={themeMode === 'light' && !blueprintMode ? 'text-slate-400' : 'text-slate-500'}>TYO</span>
             <span className={themeMode === 'light' && !blueprintMode ? 'text-slate-800 font-semibold' : 'text-slate-200'}>{tkyTime}</span>
           </div>
+          <span className={themeMode === 'light' && !blueprintMode ? 'text-slate-300' : 'text-slate-700'}>|</span>
+          <div className="flex items-center gap-1.5 text-emerald-500" title="Chief of Staff scheduler heartbeat">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>CHIEF OF STAFF: CRON ACTIVE (10s)</span>
+          </div>
         </div>
 
         {/* Global Firm Quick Action Controls */}

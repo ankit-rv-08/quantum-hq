@@ -22,6 +22,7 @@ import {
 import { EventLogEntry, FloorId, ThemeMode } from '../types';
 import { INITIAL_EVENT_LOGS } from '../data/mockData';
 import { soundFx } from '../utils/audio';
+import { FirmTelemetryMessage } from '../hooks/useWebSocket';
 
 interface TelemetryDrawerProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ interface TelemetryDrawerProps {
   shiftActive: boolean;
   blueprintMode: boolean;
   themeMode?: ThemeMode;
+  liveMessages?: FirmTelemetryMessage[];
+  isConnected?: boolean;
 }
 
 export const TelemetryDrawer: React.FC<TelemetryDrawerProps> = ({
@@ -37,6 +40,8 @@ export const TelemetryDrawer: React.FC<TelemetryDrawerProps> = ({
   shiftActive,
   blueprintMode,
   themeMode = 'dark',
+  liveMessages = [],
+  isConnected = false,
 }) => {
   const [logs, setLogs] = useState<EventLogEntry[]>(INITIAL_EVENT_LOGS);
   const [filterType, setFilterType] = useState<string>('ALL');
@@ -45,6 +50,38 @@ export const TelemetryDrawer: React.FC<TelemetryDrawerProps> = ({
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const [selectedLog, setSelectedLog] = useState<EventLogEntry | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const receivedLiveIds = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const incomingLogs = liveMessages.flatMap((packet, index) => {
+      const packetId = `${packet.type}-${packet.timestamp || packet.data?.timestamp || index}`;
+      if (receivedLiveIds.current.has(packetId)) return [];
+      receivedLiveIds.current.add(packetId);
+
+      const timestamp = packet.timestamp || packet.data?.timestamp || new Date().toISOString();
+      const eventType: EventLogEntry['type'] = packet.type === 'SYSTEM_STATUS'
+        ? 'STATE_BUS'
+        : packet.floor === 3
+        ? 'RISK_FLAG'
+        : packet.floor === 4
+        ? 'BOARD_DIRECTIVE'
+        : packet.floor === 2
+        ? 'SEC_XBRL'
+        : 'INFO';
+
+      return [{
+        id: `ws-${packetId}`,
+        timestamp: new Date(timestamp).toLocaleTimeString(),
+        floorId: (packet.floor ?? 0) as FloorId,
+        agentName: packet.agent || 'Quantum HQ Event Bus',
+        type: eventType,
+        message: packet.message || packet.data?.status || packet.type,
+        rawJson: JSON.stringify(packet, null, 2),
+      }];
+    });
+
+    if (incomingLogs.length) setLogs((previous) => [...incomingLogs, ...previous].slice(0, 100));
+  }, [liveMessages]);
 
   // Periodic simulated real-time Kafka / Redis packet ingestion
   useEffect(() => {
@@ -223,7 +260,7 @@ export const TelemetryDrawer: React.FC<TelemetryDrawerProps> = ({
                 <span className="tracking-wider">LANGGRAPH // REDIS EVENT STREAM</span>
               </div>
               <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                0.24ms LATENCY
+                {isConnected ? 'EVENT BUS LIVE' : 'EVENT BUS OFFLINE'}
               </span>
               <span className="hidden md:inline-block text-[10px] text-slate-400">
                 FastAPI Gateway • 5 Floor Shards • Zero-Copy RingBuffer

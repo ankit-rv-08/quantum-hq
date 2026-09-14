@@ -35,6 +35,7 @@ interface BoardroomWarRoomProps {
   blueprintMode: boolean;
   shiftActive: boolean;
   themeMode?: ThemeMode;
+  onVeto?: (command: string) => void;
 }
 
 interface CommitteeMember {
@@ -176,6 +177,7 @@ export const BoardroomWarRoom: React.FC<BoardroomWarRoomProps> = ({
   blueprintMode,
   shiftActive,
   themeMode = 'dark',
+  onVeto,
 }) => {
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>(DEBATE_SCENARIOS[0].id);
   const currentScenario = DEBATE_SCENARIOS.find((s) => s.id === selectedScenarioId) || DEBATE_SCENARIOS[0];
@@ -371,6 +373,7 @@ export const BoardroomWarRoom: React.FC<BoardroomWarRoomProps> = ({
 
   // Human-in-the-Loop Supervised Safety Intervention / Live Veto
   const handleExecuteHumanVeto = (directiveText: string, actionType: 'VETO_HALT' | 'DELTA_HEDGE' | 'LIQUIDITY_BUFFER' | 'CUSTOM') => {
+    onVeto?.(directiveText);
     soundFx.playVetoAlarm();
     setIsDebating(false);
     setIsInterventionActive(true);
